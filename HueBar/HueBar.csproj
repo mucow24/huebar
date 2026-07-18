@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HueBar</RootNamespace>
+    <AssemblyName>HueBar</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Tray-only app: no console window, DPI-aware via ApplicationConfiguration. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HueBar.Core\HueBar.Core.csproj" />
+  </ItemGroup>
+
+</Project>
