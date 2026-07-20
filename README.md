@@ -33,8 +33,14 @@ unit-tested headlessly.
 ```powershell
 dotnet build HueBar.sln
 dotnet run --project HueBar          # launches the tray app
-dotnet run --project HueBar.Tests    # runs the core tests (exit code 1 on failure)
+dotnet test HueBar.sln               # runs the test suite (xUnit)
 ```
+
+## Testing
+
+The bridge/client/settings logic lives in `HueBar.Core` and is covered by an xUnit suite
+in `HueBar.Tests`. The suite is a **required check** on `main` — PRs can't merge until it
+passes. See [`TESTING.md`](TESTING.md) for the policy and what is (and isn't) tested.
 
 ## First run
 
