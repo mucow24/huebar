@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows;
+using System.Windows.Media;
 using HueBar.Core;
 
 namespace HueBar;
@@ -30,8 +31,46 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
         InitializeComponent();
 
+        // Paint with the OS's current light/dark preference. WPF has no built-in dark theme, so the
+        // brushes the XAML references via DynamicResource are supplied here from the Core palette.
+        ApplyTheme(SystemThemeReader.Current());
+
         _ipBox.Text = _settings.BridgeIp ?? "";
         UpdateConnectedStatus();
+    }
+
+    /// <summary>
+    /// Injects the palette for <paramref name="theme"/> into this control's resource dictionary,
+    /// under the keys the XAML styles reference with <c>DynamicResource</c>. The theme decision and
+    /// the colours themselves live in HueBar.Core (and are unit-tested); this just turns hex into
+    /// <see cref="SolidColorBrush"/>es WPF can paint with.
+    /// </summary>
+    private void ApplyTheme(AppTheme theme)
+    {
+        var palette = ThemePalette.For(theme);
+
+        Resources["BackgroundBrush"] = Brush(palette.Background);
+        Resources["TextBrush"] = Brush(palette.Text);
+        Resources["SubtleTextBrush"] = Brush(palette.SubtleText);
+        Resources["AccentBrush"] = Brush(palette.Accent);
+        Resources["AccentHoverBrush"] = Brush(palette.AccentHover);
+        Resources["AccentPressedBrush"] = Brush(palette.AccentPressed);
+        Resources["OnAccentTextBrush"] = Brush(palette.OnAccentText);
+        Resources["ControlBorderBrush"] = Brush(palette.ControlBorder);
+        Resources["ControlFillBrush"] = Brush(palette.ControlFill);
+        Resources["ControlHoverFillBrush"] = Brush(palette.ControlHoverFill);
+        Resources["ControlPressedFillBrush"] = Brush(palette.ControlPressedFill);
+        Resources["TextBoxBackgroundBrush"] = Brush(palette.TextBoxBackground);
+    }
+
+    private static SolidColorBrush Brush(string hex)
+    {
+        // Fully qualified: both System.Drawing and System.Windows.Media are in scope in this
+        // WinForms-hosting project, so bare Color/ColorConverter would be ambiguous.
+        var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex)!;
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
     }
 
     private void UpdateConnectedStatus()

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows.Forms.Integration;
 using HueBar.Core;
 
@@ -17,10 +18,17 @@ internal sealed class SettingsForm : Form
 {
     private readonly SettingsView _view;
     private readonly ElementHost _host;
+    private readonly AppTheme _theme;
 
     public SettingsForm(HueClient hue, AppSettings settings)
     {
         _view = new SettingsView(hue, settings);
+
+        // Match the OS light/dark preference. The WPF content themes itself (see SettingsView);
+        // here we only need the host chrome — the client background behind/around the ElementHost,
+        // and the title bar (via DWM in OnHandleCreated) — to match so nothing flashes white.
+        _theme = SystemThemeReader.Current();
+        var chrome = ColorTranslator.FromHtml(ThemePalette.For(_theme).Background);
 
         Text = "HueBar — Connect to Bridge";
         AutoScaleMode = AutoScaleMode.Font;
@@ -29,18 +37,40 @@ internal sealed class SettingsForm : Form
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         Icon = IconFactory.CreateBulbIcon();
-        BackColor = Color.White;
+        BackColor = chrome;
 
         _host = new ElementHost
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.White,
+            BackColor = chrome,
             Child = _view,
         };
         // A longer status wraps to more lines, growing the WPF content; refit so it stays visible.
         _view.ContentSizeChanged += (_, _) => FitToContent();
 
         Controls.Add(_host);
+    }
+
+    // Win32 title bars are light by default; ask DWM to paint this window's title bar dark when the
+    // OS is in dark mode. Supported on Windows 10 20H1+ / 11; on anything older the call is a no-op
+    // and the default (light) title bar is used.
+    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int pvAttribute, int cbAttribute);
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        try
+        {
+            int useDark = _theme == AppTheme.Dark ? 1 : 0;
+            DwmSetWindowAttribute(Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDark, sizeof(int));
+        }
+        catch
+        {
+            // dwmapi unavailable / attribute unsupported: leave the default title bar.
+        }
     }
 
     protected override void OnLoad(EventArgs e)
