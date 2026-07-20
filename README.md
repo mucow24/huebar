@@ -10,6 +10,8 @@ sits in your notification area; click it to pick a **room** → **scene**.
   the bridge's physical link button. The credential is saved to `%AppData%\HueBar\settings.json`.
 - **Rooms → scenes menu** — left- or right-click the tray icon to get a menu of your rooms
   (and zones). Each room expands to its scenes; picking one activates it on the bridge.
+- **Light/dark** — the connect window follows your Windows app-theme setting (Settings →
+  Personalization → Colors → *Choose your mode*), title bar included.
 
 ## Requirements
 

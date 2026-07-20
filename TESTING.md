@@ -45,6 +45,7 @@ WinForms/WPF dependency), so the whole suite runs headlessly on any OS.
 | `AppSettings` | unit | JSON round-trip, `IsConnected` truth table, corrupt-file recovery, load/save against an isolated directory |
 | `BridgePairing` | unit | The retry-until-link-pressed / timeout / bridge-error loop, with an injected clock so it runs instantly |
 | `PairResult` / models | unit | Factory methods, `LinkButtonNotPressed`, `[JsonPropertyName]` wiring against real bridge JSON shapes |
+| `SystemTheme` / `ThemePalette` | unit | Windows `AppsUseLightTheme` value → light/dark (incl. missing/wrong-type), palette selection, the light theme staying byte-for-byte what shipped, and WCAG contrast in both themes |
 
 \* "integration" here = the client exercised end-to-end against a stubbed transport, not
 the happy-path-only "does it return non-null" variety.
@@ -59,7 +60,14 @@ raise a coverage number on code where the test would assert nothing meaningful:
 - **`TrayApplicationContext`, `SettingsForm`, `SettingsView` (WinForms/WPF)** — UI shells
   and event wiring. The *logic* they used to contain (the pairing loop) has been extracted
   into `BridgePairing` in Core and is tested there. What remains is presentation: menu
-  construction, `ElementHost` sizing, status-string mapping.
+  construction, `ElementHost` sizing, status-string mapping, and applying the theme palette
+  (turning the Core `ThemePalette` into brushes, and the DWM dark-title-bar call). The theme
+  *decision* — reading the OS preference and picking the palette — lives in `SystemTheme` /
+  `ThemePalette` in Core and is tested there.
+- **`SystemThemeReader`** — the one-line registry read for the OS theme. The platform call
+  (`Registry.GetValue`) can't run headlessly; its result is handed to the tested
+  `SystemTheme.FromRegistryValue` in Core, so the branchy part is covered and only the read
+  itself is exempt (like `IconFactory`).
 - **`Program.Main`** — process entry point / argument dispatch.
 
 If logic worth testing grows inside any of these, extract it into `HueBar.Core` and test
