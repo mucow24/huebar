@@ -226,4 +226,14 @@ public class HueClientTests
 
         Assert.False(await client.TurnGroupOffAsync("10.0.0.5", "USERKEY", "1"));
     }
+
+    [Fact]
+    public async Task A_group_action_returns_false_when_the_bridge_acknowledges_nothing()
+    {
+        // HTTP 200 but the bridge returned neither a success nor an error element.
+        var stub = StubHttpMessageHandler.AlwaysReturns("[ { } ]", HttpStatusCode.OK);
+        var client = stub.NewClient();
+
+        Assert.False(await client.ActivateSceneAsync("10.0.0.5", "USERKEY", "1", "sX"));
+    }
 }
