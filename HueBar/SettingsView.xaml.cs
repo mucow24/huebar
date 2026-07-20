@@ -1,14 +1,25 @@
 using System.Threading;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using HueBar.Core;
+
+// This project references both WinForms and WPF, so these type names are ambiguous; pin them to WPF
+// (the rows we build in code-behind are WPF controls painted with WPF brushes).
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using Button = System.Windows.Controls.Button;
+using RadioButton = System.Windows.Controls.RadioButton;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
 
 namespace HueBar;
 
 /// <summary>
-/// The connect pane (WPF): discover a bridge (or type its IP), then pair by pressing the
-/// bridge's physical link button. On success the application key is saved to
-/// <see cref="AppSettings"/>.
+/// The settings pane (WPF). Lists the bridges HueBar has paired with and lets you switch the
+/// active one (instant — no link-button press, because the app key is already stored), add another
+/// bridge (discover or type its IP, then pair once), forget one, and toggle whether zones appear
+/// in the tray menu. On any change the (shared) <see cref="AppSettings"/> is saved to disk; the
+/// tray reloads it when this window closes.
 ///
 /// Rendered inside the WinForms tray shell via <c>ElementHost</c> (see <see cref="SettingsForm"/>).
 /// Hosting on the app's single WinForms UI thread means these async handlers resume on that
@@ -20,8 +31,8 @@ public partial class SettingsView : System.Windows.Controls.UserControl
     private readonly AppSettings _settings;
     private CancellationTokenSource? _cts;
 
-    /// <summary>Raised when the status text changes (which can grow the content height so the
-    /// host form needs to refit). See <see cref="SettingsForm"/>.</summary>
+    /// <summary>Raised when the content height changes (list re-rendered, or status text wrapped),
+    /// so the host form can refit. See <see cref="SettingsForm"/>.</summary>
     public event EventHandler? ContentSizeChanged;
 
     public SettingsView(HueClient hue, AppSettings settings)
@@ -35,8 +46,11 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         // brushes the XAML references via DynamicResource are supplied here from the Core palette.
         ApplyTheme(SystemThemeReader.Current());
 
-        _ipBox.Text = _settings.BridgeIp ?? "";
-        UpdateConnectedStatus();
+        _includeZones.IsChecked = _settings.IncludeZones;
+        RenderBridges();
+
+        if (_settings.IsConnected)
+            SetStatus($"Controlling {_settings.ActiveBridge!.DisplayName}. Switch bridges above, or add another below.");
     }
 
     /// <summary>
@@ -73,11 +87,114 @@ public partial class SettingsView : System.Windows.Controls.UserControl
         return brush;
     }
 
-    private void UpdateConnectedStatus()
+    // ---- Bridge list ----------------------------------------------------------
+
+    /// <summary>Rebuilds the bridge rows from the current settings and refits the host form.</summary>
+    private void RenderBridges()
     {
-        if (_settings.IsConnected)
-            SetStatus($"Currently connected to bridge at {_settings.BridgeIp}.");
+        _bridgeList.Children.Clear();
+
+        _emptyBridges.Visibility = _settings.Bridges.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var bridge in _settings.Bridges)
+            _bridgeList.Children.Add(BuildBridgeRow(bridge));
+
+        ContentSizeChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private UIElement BuildBridgeRow(BridgeEntry bridge)
+    {
+        bool isActive = bridge.Id == _settings.ActiveBridgeId;
+
+        var text = new StackPanel();
+        text.Children.Add(new TextBlock
+        {
+            Text = bridge.DisplayName,
+            FontSize = 14.5,
+            Foreground = (Brush)Resources["TextBrush"],
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        });
+        // Show the IP on its own line only when the primary label is a *name* (else it would repeat).
+        if (!string.Equals(bridge.DisplayName, bridge.BridgeIp, StringComparison.Ordinal))
+        {
+            text.Children.Add(new TextBlock
+            {
+                Text = bridge.BridgeIp,
+                FontSize = 12,
+                Margin = new Thickness(0, 1, 0, 0),
+                Foreground = (Brush)Resources["SubtleTextBrush"],
+            });
+        }
+
+        var radio = new RadioButton
+        {
+            GroupName = "bridges",
+            Style = (Style)FindResource("BridgeRadio"),
+            Content = text,
+            IsChecked = isActive,
+            Tag = bridge.Id,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        // Attached AFTER IsChecked is set above, so re-rendering never re-fires this as a "switch".
+        radio.Checked += OnBridgeChecked;
+        Grid.SetColumn(radio, 0);
+
+        var forget = new Button
+        {
+            Content = "Forget",
+            Style = (Style)FindResource("SubtleButton"),
+            Tag = bridge.Id,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        forget.Click += OnForget;
+        Grid.SetColumn(forget, 1);
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.Children.Add(radio);
+        grid.Children.Add(forget);
+
+        return new Border
+        {
+            Padding = new Thickness(8, 8, 6, 8),
+            CornerRadius = new CornerRadius(6),
+            Background = isActive ? (Brush)Resources["ControlHoverFillBrush"] : Brushes.Transparent,
+            Child = grid,
+        };
+    }
+
+    private void OnBridgeChecked(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton { Tag: string id } && id != _settings.ActiveBridgeId)
+        {
+            _settings.SetActiveBridge(id);
+            _settings.Save();
+            RenderBridges(); // move the active-row highlight to the new selection
+            SetStatus($"Switched to {_settings.ActiveBridge?.DisplayName}.");
+        }
+    }
+
+    private void OnForget(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string id })
+        {
+            _settings.RemoveBridge(id);
+            _settings.Save();
+            RenderBridges();
+            SetStatus(_settings.Bridges.Count == 0
+                ? "All bridges removed. Add one below to reconnect."
+                : $"Bridge forgotten. Now controlling {_settings.ActiveBridge?.DisplayName}.");
+        }
+    }
+
+    private void OnIncludeZonesChanged(object sender, RoutedEventArgs e)
+    {
+        _settings.IncludeZones = _includeZones.IsChecked == true;
+        _settings.Save();
+    }
+
+    // ---- Add a bridge (discover + pair) --------------------------------------
 
     private async void OnDiscover(object sender, RoutedEventArgs e)
     {
@@ -134,10 +251,18 @@ public partial class SettingsView : System.Windows.Controls.UserControl
             switch (outcome.Status)
             {
                 case PairingStatus.Connected:
-                    _settings.BridgeIp = ip;
-                    _settings.Username = outcome.Username;
+                    var username = outcome.Username ?? "";
+                    // Best-effort enrichment: the bridge's own name gives the list a friendly label,
+                    // and its bridgeid a stable key. If the bridge doesn't answer, fall back to the
+                    // IP as the id and no name — pairing already succeeded, so never fail on this.
+                    var config = await _hue.GetBridgeConfigAsync(ip, username);
+                    var id = !string.IsNullOrWhiteSpace(config?.BridgeId) ? config!.BridgeId! : ip;
+                    _settings.AddOrUpdateBridge(id, ip, username, config?.Name);
                     _settings.Save();
-                    SetStatus("Connected! Right-click the tray icon to pick a room and scene. You can close this window.");
+
+                    _ipBox.Text = "";
+                    RenderBridges();
+                    SetStatus($"Connected to {_settings.ActiveBridge!.DisplayName}. Add another bridge, or close this window.");
                     break;
 
                 case PairingStatus.BridgeError:

@@ -41,8 +41,8 @@ WinForms/WPF dependency), so the whole suite runs headlessly on any OS.
 | Area | Type | What's covered |
 |------|------|----------------|
 | `RoomSceneMapper` | unit | Room/Zone filtering, scene→group attachment, sorting, `includeZones` |
-| `HueClient` | integration* | Every HTTP method via a fake `HttpMessageHandler`: happy paths, `HueApiException` on error arrays, link-button (type 101), network failure, malformed bodies |
-| `AppSettings` | unit | JSON round-trip, `IsConnected` truth table, corrupt-file recovery, load/save against an isolated directory |
+| `HueClient` | integration* | Every HTTP method via a fake `HttpMessageHandler`: happy paths, `HueApiException` on error arrays, link-button (type 101), network failure, malformed bodies, and the best-effort `/config` name+id fetch (null on error array / network failure) |
+| `AppSettings` | unit | The bridge list + active-bridge pointer (add / re-pair / switch / forget), `IsConnected` via the active bridge, legacy single-bridge → list migration, JSON round-trip, and corrupt/missing-file recovery |
 | `BridgePairing` | unit | The retry-until-link-pressed / timeout / bridge-error loop, with an injected clock so it runs instantly |
 | `PairResult` / models | unit | Factory methods, `LinkButtonNotPressed`, `[JsonPropertyName]` wiring against real bridge JSON shapes |
 | `SystemTheme` / `ThemePalette` | unit | Windows `AppsUseLightTheme` value → light/dark (incl. missing/wrong-type), palette selection, the light theme staying byte-for-byte what shipped, and WCAG contrast in both themes |
@@ -60,7 +60,8 @@ raise a coverage number on code where the test would assert nothing meaningful:
 - **`TrayApplicationContext`, `SettingsForm`, `SettingsView` (WinForms/WPF)** — UI shells
   and event wiring. The *logic* they used to contain (the pairing loop) has been extracted
   into `BridgePairing` in Core and is tested there. What remains is presentation: menu
-  construction, `ElementHost` sizing, status-string mapping, and applying the theme palette
+  construction, `ElementHost` sizing, status-string mapping, building the bridge-list rows and
+  wiring switch/forget/connect to the tested `AppSettings` methods, and applying the theme palette
   (turning the Core `ThemePalette` into brushes, and the DWM dark-title-bar call). The theme
   *decision* — reading the OS preference and picking the palette — lives in `SystemTheme` /
   `ThemePalette` in Core and is tested there.

@@ -53,6 +53,28 @@ public sealed class HueClient
         return PairResult.Fail(-1, "Unexpected response from bridge.");
     }
 
+    /// <summary>
+    /// Best-effort fetch of the bridge's name and id from <c>GET /api/&lt;key&gt;/config</c>, used
+    /// to label and identify a freshly paired bridge. Returns null on any failure (a network error,
+    /// or the bridge returning an error array for a bad key) — enriching a bridge with a friendly
+    /// name must never block adding it.
+    /// </summary>
+    public async Task<BridgeConfig?> GetBridgeConfigAsync(string bridgeIp, string username, CancellationToken ct = default)
+    {
+        try
+        {
+            var body = await _http.GetStringAsync($"http://{bridgeIp}/api/{username}/config", ct);
+            // A bad key makes the bridge return an error *array*; there is no config object to read.
+            if (body.TrimStart().StartsWith('['))
+                return null;
+            return JsonSerializer.Deserialize<BridgeConfig>(body);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public async Task<Dictionary<string, HueGroup>> GetGroupsAsync(string bridgeIp, string username, CancellationToken ct = default)
     {
         var body = await _http.GetStringAsync($"http://{bridgeIp}/api/{username}/groups", ct);

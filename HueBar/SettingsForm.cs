@@ -30,7 +30,7 @@ internal sealed class SettingsForm : Form
         _theme = SystemThemeReader.Current();
         var chrome = ColorTranslator.FromHtml(ThemePalette.For(_theme).Background);
 
-        Text = "HueBar — Connect to Bridge";
+        Text = "HueBar — Settings";
         AutoScaleMode = AutoScaleMode.Font;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -81,22 +81,20 @@ internal sealed class SettingsForm : Form
 
     /// <summary>
     /// Sizes the form to exactly fit the hosted WPF content so nothing is clipped. The content is
-    /// fixed-width and grows only in height, so we measure it unconstrained (avoiding ElementHost's
-    /// AutoSize, which clamps the child's width and under-reports it) and convert WPF's
-    /// device-independent units to physical pixels for <see cref="Form.ClientSize"/>.
+    /// fixed-width and grows/shrinks in height (a longer status wraps; forgetting a bridge shortens
+    /// the list), so we measure it unconstrained (avoiding ElementHost's AutoSize, which clamps the
+    /// child's width and under-reports it) and convert WPF's device-independent units to physical
+    /// pixels for <see cref="Form.ClientSize"/>. We refit exactly every time rather than latching a
+    /// minimum, so the window tracks the content in both directions.
     /// </summary>
     private void FitToContent()
     {
         _view.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
         var desired = _view.DesiredSize; // 1/96" device-independent units
         double scale = DeviceDpi / 96.0;
-        var size = new Size(
+        ClientSize = new Size(
             (int)Math.Ceiling(desired.Width * scale),
             (int)Math.Ceiling(desired.Height * scale));
-
-        ClientSize = size;
-        if (MinimumSize.IsEmpty)
-            MinimumSize = Size; // don't let a later (shorter) status shrink it below the initial fit
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

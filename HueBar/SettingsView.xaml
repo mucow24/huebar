@@ -85,6 +85,61 @@
             </Setter>
         </Style>
 
+        <!-- Subtle, borderless text button (Forget). Accent-coloured on hover. -->
+        <Style x:Key="SubtleButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource SubtleTextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Bridge-row radio: an accent dot + the row content; clicking anywhere selects it. -->
+        <Style x:Key="BridgeRadio" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border Background="Transparent">
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,11,0">
+                                    <Ellipse x:Name="ring" Width="18" Height="18"
+                                             Stroke="{DynamicResource ControlBorderBrush}" StrokeThickness="1.5" />
+                                    <Ellipse x:Name="dot" Width="9" Height="9"
+                                             Fill="{DynamicResource AccentBrush}" Visibility="Collapsed" />
+                                </Grid>
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ring" Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="dot" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Flat, rounded text box -->
         <Style x:Key="FlatTextBox" TargetType="TextBox">
             <Setter Property="Height" Value="34" />
@@ -115,6 +170,14 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Section header (small, subtle, all-caps-ish spacing) -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource SubtleTextBrush}" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
     </UserControl.Resources>
 
     <!-- Fixed width lives on this inner Border (not the UserControl root, whose Width ElementHost
@@ -122,14 +185,36 @@
          stretching the window. -->
     <Border Width="480" Padding="22,20,22,20">
     <StackPanel>
-        <TextBlock Text="Connect HueBar to your Philips Hue bridge"
+        <TextBlock Text="HueBar settings"
                    FontSize="18"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextBrush}"
-                   TextWrapping="Wrap"
                    Margin="0,0,0,18" />
 
-        <!-- One line: [Discover]  Bridge IP:  [ip]  [Connect] -->
+        <!-- Bridges -->
+        <TextBlock Text="Bridges" Style="{StaticResource SectionHeader}" />
+        <Border BorderBrush="{DynamicResource ControlBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="6">
+            <StackPanel>
+                <TextBlock x:Name="_emptyBridges"
+                           Text="No bridges yet. Add one below."
+                           Foreground="{DynamicResource SubtleTextBrush}"
+                           Margin="6,8,6,8"
+                           Visibility="Collapsed" />
+                <StackPanel x:Name="_bridgeList" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="Switching is instant — HueBar already has each bridge's key, so there's nothing to press."
+                   Foreground="{DynamicResource SubtleTextBrush}"
+                   FontSize="12"
+                   TextWrapping="Wrap"
+                   Margin="2,8,0,0" />
+
+        <!-- Add a bridge (the old connect flow) -->
+        <TextBlock Text="Add a bridge" Style="{StaticResource SectionHeader}" Margin="0,20,0,8" />
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -166,8 +251,15 @@
         <TextBlock x:Name="_statusLabel"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource SubtleTextBrush}"
-                   Margin="0,16,0,0"
+                   Margin="0,12,0,0"
                    MinHeight="19" />
+
+        <!-- General -->
+        <TextBlock Text="General" Style="{StaticResource SectionHeader}" Margin="0,20,0,8" />
+        <CheckBox x:Name="_includeZones"
+                  Content="Include zones, not just rooms, in the menu"
+                  Foreground="{DynamicResource TextBrush}"
+                  Click="OnIncludeZonesChanged" />
     </StackPanel>
     </Border>
 </UserControl>

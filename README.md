@@ -6,11 +6,14 @@ sits in your notification area; click it to pick a **room** → **scene**.
 ## Features (MVP)
 
 - **Tray icon** — a simple white lightbulb, drawn at runtime (no image asset to ship).
-- **Bridge setup pane** — auto-discover your bridge (or type its IP), then pair by pressing
-  the bridge's physical link button. The credential is saved to `%AppData%\HueBar\settings.json`.
-- **Rooms → scenes menu** — left- or right-click the tray icon to get a menu of your rooms
-  (and zones). Each room expands to its scenes; picking one activates it on the bridge.
-- **Light/dark** — the connect window follows your Windows app-theme setting (Settings →
+- **Bridge setup** — auto-discover a bridge (or type its IP), then pair by pressing the bridge's
+  physical link button. Needed only the first time you add a bridge.
+- **Multiple bridges** — HueBar keeps a list of paired bridges. Add as many as you like and
+  switch the active one from the settings panel *instantly* — no link-button press, because each
+  bridge's key is already stored. Credentials are saved to `%AppData%\HueBar\settings.json`.
+- **Rooms → scenes menu** — left- or right-click the tray icon to get a menu of the active
+  bridge's rooms (and zones). Each room expands to its scenes; picking one activates it.
+- **Light/dark** — the settings window follows your Windows app-theme setting (Settings →
   Personalization → Colors → *Choose your mode*), title bar included.
 
 ## Requirements
@@ -46,11 +49,13 @@ passes. See [`TESTING.md`](TESTING.md) for the policy and what is (and isn't) te
 
 ## First run
 
-1. The **Connect to Bridge** window opens automatically.
+1. The **Settings** window opens automatically.
 2. Click **Discover** (or type the bridge IP), then **press the link button on top of your
    bridge** and click **Connect** within ~30 seconds.
 3. Once connected, left- or right-click the tray icon to browse rooms and scenes.
 4. Added a room or scene in the Hue app? Use **Refresh rooms & scenes** in the tray menu.
+5. Have more than one bridge? Add each from **Settings…** (tray menu). They appear in a list;
+   click a bridge to make it active — the switch is instant, with no button press.
 
 ## Publish a standalone .exe
 
