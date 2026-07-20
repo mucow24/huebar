@@ -112,6 +112,46 @@ public class HueClientTests
         Assert.Equal(-1, result.ErrorType);
     }
 
+    // ---- GetBridgeConfigAsync -------------------------------------------------
+
+    [Fact]
+    public async Task GetBridgeConfig_parses_name_and_bridgeid_and_targets_the_config_url()
+    {
+        // A real /config carries many more fields; the client keeps only name + bridgeid.
+        const string body = """
+        { "name": "Living room", "bridgeid": "001788FFFE123456", "swversion": "1962097030",
+          "apiversion": "1.62.0", "mac": "00:17:88:12:34:56", "factorynew": false }
+        """;
+        var stub = StubHttpMessageHandler.AlwaysReturns(body);
+        var client = stub.NewClient();
+
+        var config = await client.GetBridgeConfigAsync("10.0.0.5", "USERKEY");
+
+        Assert.NotNull(config);
+        Assert.Equal("Living room", config!.Name);
+        Assert.Equal("001788FFFE123456", config.BridgeId);
+        Assert.Equal("http://10.0.0.5/api/USERKEY/config", stub.Requests.Single().Uri.ToString());
+    }
+
+    [Fact]
+    public async Task GetBridgeConfig_returns_null_when_the_bridge_returns_an_error_array()
+    {
+        // A bad/unauthorized key yields an error array, not a config object.
+        var stub = StubHttpMessageHandler.AlwaysReturns(
+            """[ { "error": { "type": 1, "address": "/config", "description": "unauthorized user" } } ]""");
+        var client = stub.NewClient();
+
+        Assert.Null(await client.GetBridgeConfigAsync("10.0.0.5", "BADKEY"));
+    }
+
+    [Fact]
+    public async Task GetBridgeConfig_returns_null_on_network_failure()
+    {
+        var client = StubHttpMessageHandler.AlwaysThrows().NewClient();
+
+        Assert.Null(await client.GetBridgeConfigAsync("10.0.0.5", "USERKEY"));
+    }
+
     // ---- GetGroupsAsync / GetScenesAsync -------------------------------------
 
     [Fact]

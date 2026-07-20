@@ -125,11 +125,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private async Task ActivateAsync(Room room, SceneRef scene)
     {
-        if (!_settings.IsConnected)
+        var bridge = _settings.ActiveBridge;
+        if (bridge is not { IsUsable: true })
             return;
         try
         {
-            bool ok = await _hue.ActivateSceneAsync(_settings.BridgeIp!, _settings.Username!, room.Id, scene.Id);
+            bool ok = await _hue.ActivateSceneAsync(bridge.BridgeIp, bridge.Username, room.Id, scene.Id);
             if (!ok)
                 Notify($"Couldn't activate \"{scene.Name}\".", ToolTipIcon.Warning);
         }
@@ -141,11 +142,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private async Task TurnRoomOffAsync(Room room)
     {
-        if (!_settings.IsConnected)
+        var bridge = _settings.ActiveBridge;
+        if (bridge is not { IsUsable: true })
             return;
         try
         {
-            bool ok = await _hue.TurnGroupOffAsync(_settings.BridgeIp!, _settings.Username!, room.Id);
+            bool ok = await _hue.TurnGroupOffAsync(bridge.BridgeIp, bridge.Username, room.Id);
             if (!ok)
                 Notify($"Couldn't turn off \"{room.Name}\".", ToolTipIcon.Warning);
         }
@@ -172,12 +174,13 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private async Task RefreshRoomsAsync()
     {
-        if (!_settings.IsConnected)
+        var bridge = _settings.ActiveBridge;
+        if (bridge is not { IsUsable: true })
             return;
         try
         {
-            var groups = await _hue.GetGroupsAsync(_settings.BridgeIp!, _settings.Username!);
-            var scenes = await _hue.GetScenesAsync(_settings.BridgeIp!, _settings.Username!);
+            var groups = await _hue.GetGroupsAsync(bridge.BridgeIp, bridge.Username);
+            var scenes = await _hue.GetScenesAsync(bridge.BridgeIp, bridge.Username);
             _rooms = RoomSceneMapper.BuildRooms(groups, scenes, _settings.IncludeZones);
         }
         catch (Exception ex)

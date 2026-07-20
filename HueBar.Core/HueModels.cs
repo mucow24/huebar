@@ -11,6 +11,16 @@ public sealed class DiscoveredBridge
     [JsonPropertyName("port")] public int Port { get; set; }
 }
 
+/// <summary>
+/// The subset of a bridge's <c>/config</c> HueBar uses to label and identify it: the user-set
+/// <c>name</c> and the immutable <c>bridgeid</c>. Other config fields are ignored.
+/// </summary>
+public sealed class BridgeConfig
+{
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("bridgeid")] public string? BridgeId { get; set; }
+}
+
 /// <summary>A Hue "group" — Room, Zone, LightGroup, etc. Returned keyed by id from GET /groups.</summary>
 public sealed class HueGroup
 {
