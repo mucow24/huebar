@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: build-and-test
+    # The HueBar tray app targets net8.0-windows (WinForms/WPF), so the solution only
+    # builds on Windows. The tests themselves live in HueBar.Core (net8.0) and are OS-agnostic.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore HueBar.sln
+
+      - name: Build
+        run: dotnet build HueBar.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test HueBar.sln -c Release --no-build --verbosity normal

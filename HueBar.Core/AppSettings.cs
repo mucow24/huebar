@@ -19,13 +19,21 @@ public sealed class AppSettings
 
     private static string SettingsPath => Path.Combine(SettingsDirectory, "settings.json");
 
-    public static AppSettings Load()
+    public static AppSettings Load() => Load(SettingsPath);
+
+    /// <summary>
+    /// Loads settings from an explicit path. A missing, empty, or corrupt file yields fresh
+    /// defaults rather than throwing, so a bad file can never keep the app from starting.
+    /// (The path overload exists so the load/recover logic can be unit-tested without touching
+    /// the real %AppData%.)
+    /// </summary>
+    public static AppSettings Load(string path)
     {
         try
         {
-            if (!File.Exists(SettingsPath))
+            if (!File.Exists(path))
                 return new AppSettings();
-            var json = File.ReadAllText(SettingsPath);
+            var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
         }
         catch
@@ -35,10 +43,15 @@ public sealed class AppSettings
         }
     }
 
-    public void Save()
+    public void Save() => Save(SettingsPath);
+
+    /// <summary>Serializes settings to an explicit path, creating its directory if needed.</summary>
+    public void Save(string path)
     {
-        Directory.CreateDirectory(SettingsDirectory);
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(SettingsPath, json);
+        File.WriteAllText(path, json);
     }
 }

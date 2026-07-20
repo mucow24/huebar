@@ -85,33 +85,30 @@ public partial class SettingsView : System.Windows.Controls.UserControl
 
         try
         {
-            while (!_cts.IsCancellationRequested)
-            {
-                var result = await _hue.PairAsync(ip, ct: _cts.Token);
+            // The retry/timeout/link-button loop lives in HueBar.Core.BridgePairing (unit-tested);
+            // here we just drive it with the real client + clock and map the outcome to status text.
+            var outcome = await BridgePairing.RunAsync(
+                ct => _hue.PairAsync(ip, ct: ct),
+                ct => Task.Delay(1500, ct),
+                _cts.Token);
 
-                if (result.Success)
-                {
+            switch (outcome.Status)
+            {
+                case PairingStatus.Connected:
                     _settings.BridgeIp = ip;
-                    _settings.Username = result.Username;
+                    _settings.Username = outcome.Username;
                     _settings.Save();
                     SetStatus("Connected! Right-click the tray icon to pick a room and scene. You can close this window.");
-                    return;
-                }
+                    break;
 
-                if (!result.LinkButtonNotPressed)
-                {
-                    SetStatus($"Bridge error: {result.ErrorMessage}");
-                    return;
-                }
+                case PairingStatus.BridgeError:
+                    SetStatus($"Bridge error: {outcome.ErrorMessage}");
+                    break;
 
-                await Task.Delay(1500, _cts.Token);
+                case PairingStatus.TimedOut:
+                    SetStatus("Timed out waiting for the link button. Press it, then click Connect again.");
+                    break;
             }
-
-            SetStatus("Timed out waiting for the link button. Press it, then click Connect again.");
-        }
-        catch (OperationCanceledException)
-        {
-            SetStatus("Timed out. Press the link button, then click Connect again.");
         }
         catch (Exception ex)
         {
