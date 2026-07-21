@@ -102,4 +102,17 @@ public class BridgePairingTests
 
         Assert.Equal(PairingStatus.TimedOut, outcome.Status);
     }
+
+    [Fact]
+    public async Task A_cancellation_not_caused_by_the_deadline_propagates_as_a_failure()
+    {
+        // HttpClient.Timeout also surfaces as an OperationCanceledException — but with the
+        // pairing token NOT cancelled. That's "nothing answered at that address", not "the user
+        // never pressed the button", so it must escape the loop as the connectivity failure it
+        // is rather than being reported as a pairing timeout.
+        await Assert.ThrowsAsync<TaskCanceledException>(() => BridgePairing.RunAsync(
+            _ => throw new TaskCanceledException("simulated HttpClient timeout"),
+            InstantWait,
+            CancellationToken.None));
+    }
 }
