@@ -274,12 +274,20 @@ public partial class SettingsView : System.Windows.Controls.UserControl
                     break;
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Not the pairing deadline (BridgePairing folds that into TimedOut) — this is the
+            // HTTP request itself giving up because nothing answered at that address.
+            SetStatus("The bridge did not respond. Check the IP address and that the bridge is reachable.");
+        }
         catch (Exception ex)
         {
             SetStatus($"Connection failed: {ex.Message}. Check the IP address and that the bridge is reachable.");
         }
         finally
         {
+            _cts?.Dispose();
+            _cts = null;
             _connectButton.IsEnabled = true;
             _discoverButton.IsEnabled = true;
         }

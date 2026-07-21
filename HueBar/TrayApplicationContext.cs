@@ -47,7 +47,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         };
 
         if (_settings.IsConnected)
-            _ = RefreshRoomsAsync();
+            _ = RefreshInBackgroundAsync();
         else
             ShowSettings(); // First run: guide the user to connect.
     }
@@ -157,6 +157,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
+    /// <summary>
+    /// Opportunistic refresh (startup, every menu open): skips if one is already running, and
+    /// fails silently — the menu still works from cached data, and a balloon on every open while
+    /// the bridge is off would just be noise. The explicit "Refresh" menu items report failures.
+    /// </summary>
     private async Task RefreshInBackgroundAsync()
     {
         if (_refreshing || !_settings.IsConnected)
@@ -164,7 +169,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _refreshing = true;
         try
         {
-            await RefreshRoomsAsync();
+            await RefreshRoomsAsync(notifyOnFailure: false);
         }
         finally
         {
@@ -172,7 +177,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
-    private async Task RefreshRoomsAsync()
+    private async Task RefreshRoomsAsync(bool notifyOnFailure = true)
     {
         var bridge = _settings.ActiveBridge;
         if (bridge is not { IsUsable: true })
@@ -185,7 +190,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
         catch (Exception ex)
         {
-            Notify($"Failed to load rooms: {ex.Message}", ToolTipIcon.Error);
+            if (notifyOnFailure)
+                Notify($"Failed to load rooms: {ex.Message}", ToolTipIcon.Error);
         }
     }
 

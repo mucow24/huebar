@@ -59,9 +59,11 @@ public static class BridgePairing
                 await waitBetweenAttempts(ct);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // The deadline elapsed mid-attempt or mid-wait: treat as a timeout, not a crash.
+            // A cancellation NOT triggered by ct (e.g. HttpClient.Timeout on an unreachable IP)
+            // falls through this filter and propagates as the connectivity failure it is.
         }
 
         return PairingOutcome.TimedOut();

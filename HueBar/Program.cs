@@ -17,6 +17,14 @@ internal static class Program
             return;
         }
 
+        // Two tray instances would mean two identical icons and two last-write-wins writers of
+        // settings.json; let the first instance win and exit this one quietly. Deliberately not
+        // applied to --settings above: that's an explicit, short-lived window, and gating it
+        // would make it silently do nothing while the tray runs.
+        using var instanceLock = new Mutex(initiallyOwned: true, @"Local\HueBar.SingleInstance", out bool isFirstInstance);
+        if (!isFirstInstance)
+            return;
+
         Application.Run(new TrayApplicationContext());
     }
 }
